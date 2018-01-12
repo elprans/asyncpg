@@ -18,6 +18,9 @@ import urllib.parse
 from . import exceptions
 from . import protocol
 
+import logging
+logger = logging.getLogger('asyncpg.connection')
+
 
 _ConnectionParameters = collections.namedtuple(
     'ConnectionParameters',
@@ -272,6 +275,7 @@ async def _connect_addr(*, addr, loop, timeout, params, config,
         connector = loop.create_connection(proto_factory, *addr)
 
     before = time.monotonic()
+    logger.info('connecting...')
     tr, pr = await asyncio.wait_for(
         connector, timeout=timeout, loop=loop)
     timeout -= time.monotonic() - before
@@ -285,6 +289,7 @@ async def _connect_addr(*, addr, loop, timeout, params, config,
         raise
 
     con = connection_class(pr, tr, loop, addr, config, params)
+    logger.info('connected: %s', con)
     pr.set_connection(con)
     return con
 
@@ -300,6 +305,7 @@ async def _connect(*, loop, timeout, connection_class, **kwargs):
     for addr in addrs:
         before = time.monotonic()
         try:
+            logger.info('connecting...')
             con = await _connect_addr(
                 addr=addr, loop=loop, timeout=timeout,
                 params=params, config=config,
@@ -307,6 +313,7 @@ async def _connect(*, loop, timeout, connection_class, **kwargs):
         except (OSError, asyncio.TimeoutError, ConnectionError) as ex:
             last_error = ex
         else:
+            logger.info('connected: %s', con)
             return con
         finally:
             timeout -= time.monotonic() - before

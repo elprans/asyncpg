@@ -14,6 +14,9 @@ from . import connection
 from . import connect_utils
 from . import exceptions
 
+import logging
+logger = logging.getLogger('asyncpg.pool')
+
 
 class PoolConnectionProxyMeta(type):
 
@@ -116,6 +119,7 @@ class PoolConnectionHolder:
 
     async def connect(self):
         assert self._con is None
+        logger.info('creating a new connection')
 
         if self._pool._working_addr is None:
             # First connection attempt on this pool.
@@ -185,6 +189,7 @@ class PoolConnectionHolder:
 
         elif self._con._protocol.queries_count >= self._max_queries:
             try:
+                logger.info('max_queries reached, closing connection')
                 await self._con.close(timeout=timeout)
             finally:
                 self._con = None
@@ -222,6 +227,7 @@ class PoolConnectionHolder:
                 self._max_inactive_time, self._deactivate_connection)
 
     async def close(self):
+        logger.info('closing connection')
         self._maybe_cancel_inactive_callback()
         if self._con is None:
             return
@@ -235,6 +241,7 @@ class PoolConnectionHolder:
             self._con = None
 
     def terminate(self):
+        logger.info('terminating connection')
         self._maybe_cancel_inactive_callback()
         if self._con is None:
             return
@@ -256,6 +263,7 @@ class PoolConnectionHolder:
         assert not self._in_use
         if self._con is None or self._con.is_closed():
             return
+        logger.info('terminating connection')
         self._con.terminate()
         self._con = None
 

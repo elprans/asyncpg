@@ -24,6 +24,9 @@ from . import serverversion
 from . import transaction
 from . import utils
 
+import logging
+logger = logging.getLogger('asyncpg.connection')
+
 
 class ConnectionMeta(type):
 
@@ -980,7 +983,9 @@ class Connection(metaclass=ConnectionMeta):
         self._log_listeners.clear()
         self._aborted = True
         try:
+            logger.info('closing connection %s', self)
             await self._protocol.close(timeout)
+            logger.info('closed connection: %s', self)
         except Exception:
             # If we fail to close gracefully, abort the connection.
             self._aborted = True
@@ -991,6 +996,7 @@ class Connection(metaclass=ConnectionMeta):
 
     def terminate(self):
         """Terminate the connection without waiting for pending data."""
+        logger.info('terminating connection %s', self)
         self._mark_stmts_as_closed()
         self._listeners.clear()
         self._log_listeners.clear()
